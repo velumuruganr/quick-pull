@@ -1,5 +1,9 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, Context};
 use clap::Parser;
+use futures_util::future::join_all;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use tokio::io::{AsyncWriteExt, AsyncSeekExt};
+use std::io::SeekFrom;
 use reqwest::header::{CONTENT_LENGTH, RANGE};
 
 #[derive(Debug, Clone, Copy)]
@@ -66,11 +70,8 @@ async fn get_file_size(url: &str) -> Result<u64> {
     Ok(content_length)
 }
 
-async fn download_chunk(url: String, chunk: Chunk, output_file: String) -> Result<()> {
-    println!("  -> Starting chunk: {}-{}", chunk.start, chunk.end);
-
+async fn download_chunk(url: String, chunk: Chunk, output_file: String, pb: ProgressBar) -> Result<()> {
     let client = reqwest::Client::new();
-
     let range_header = format!("bytes={}-{}", chunk.start, chunk.end);
     
     let mut response = client.get(&url).header(RANGE, range_header).send().await?;
@@ -81,7 +82,14 @@ async fn download_chunk(url: String, chunk: Chunk, output_file: String) -> Resul
         .await
         .context("Failed to open file")?;
 
+    file.seek(SeekFrom::Start(chunk.start)).await?;
 
+    while let Some(response_bytes) = response.chunk().await? {
+        pb.inc(response_bytes.len() as u64);
+        file.write_all(&response_bytes).await?;
+    }
+
+    pb.finish_with_message("Done!");
     Ok(())
 }
 
@@ -90,19 +98,45 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     println!("Starting download for: {}", args.url);
 
-    let file_size = get_file_size(&args.url).await?;
+    let file_size: u64 = get_file_size(&args.url).await?;
     println!("File Size: {}", file_size);
+
+    let output_filename = args.output.unwrap_or_else(|| "output.bin".to_string());
+
+    let file = tokio::fs::File::create(&output_filename).await?;
+    file.set_len(file_size).await?;
 
     let chunks = calculate_chunks(file_size, args.threads as u64);
 
-    for (i, chunk) in chunks.iter().enumerate() {
-        println!(
-            "Thread: {}, Start: {}, End: {} (Size: {} bytes)",
-            i + 1,
-            chunk.start,
-            chunk.end,
-            chunk.end - chunk.start + 1
-        );
+    let multi_progress = MultiProgress::new();
+
+    let style = ProgressStyle::with_template(
+        "{msg} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes/total_bytes} ({eta})"
+    ).unwrap().progress_chars("=>-");
+
+    let mut tasks = Vec::new();
+
+    for (i, chunk) in chunks.into_iter().enumerate() {
+        let url = args.url.clone();
+        let filename = output_filename.clone();
+
+        let pb = multi_progress.add(ProgressBar::new(chunk.end - chunk.start + 1));
+        pb.set_style(style.clone());
+        pb.set_message(format!("Thread: {}", i+1));
+        let task = tokio::spawn(async move {
+            download_chunk(url, chunk, filename, pb).await
+        });
+
+        tasks.push(task);
     }
+    println!("Downloading...");
+
+    let results = join_all(tasks).await;
+
+    for result in results {
+        result??;
+    }
+
+    println!("Download completed.");
     Ok(())
 }

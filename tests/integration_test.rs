@@ -25,6 +25,7 @@ async fn test_download_single_chunk() {
     let state = Arc::new(Mutex::new(DownloadState {
         url: mock_server.uri(),
         chunks: vec![Chunk {
+            index: 0,
             start: 0,
             end: 10,
             completed: false,
@@ -32,20 +33,22 @@ async fn test_download_single_chunk() {
     }));
 
     let chunk = Chunk {
+        index: 0,
         start: 0,
         end: 10,
         completed: false,
     };
     let pb = ProgressBar::hidden(); // Invisible progress bar for testing
 
+    let client = reqwest::Client::new();
     let result = download_chunk(
-        0,
         chunk,
         output_path.clone(),
         pb,
         state.clone(),
         state_path.clone(),
         None, // No rate limiter
+        client,
     )
     .await;
 

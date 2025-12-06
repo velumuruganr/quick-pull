@@ -35,7 +35,6 @@ pub type ArcRateLimiter = Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>
 /// * `state_filename` - The path to save the state JSON file.
 /// * `limiter` - An optional rate limiter to throttle download speed.
 pub async fn download_chunk(
-    chunk_index: usize,
     chunk: Chunk,
     output_file: String,
     pb: ProgressBar,
@@ -96,7 +95,7 @@ pub async fn download_chunk(
         match result {
             Ok(_) => {
                 let mut locked_state = state.lock().await;
-                locked_state.chunks[chunk_index].completed = true;
+                locked_state.chunks[chunk.index].completed = true;
 
                 save_state(&locked_state, &state_filename).await?;
 

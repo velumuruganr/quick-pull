@@ -53,6 +53,7 @@ pub fn calculate_chunks(total_size: u64, num_threads: u64) -> Vec<Chunk> {
         };
 
         chunks.push(Chunk {
+            index: i as usize,
             start,
             end,
             completed: false,

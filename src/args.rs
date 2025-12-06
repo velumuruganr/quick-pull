@@ -1,41 +1,62 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 /// A robust, concurrent file downloader.
 ///
 /// This tool splits files into chunks and downloads them in parallel,
 /// with support for resuming and rate limiting.
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about)]
 pub struct Args {
-    /// The URL of the file to download.
-    #[arg(short, long)]
-    pub url: String,
+    #[command(subcommand)]
+    pub command: Option<Commands>,
+}
 
-    /// The name of the output file. If not provided, defaults to "output.bin".
-    #[arg(short, long)]
-    pub output: Option<String>,
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    /// Start the background daemon
+    Start,
+    /// Add a download to the running daemon
+    Add {
+        /// URL to download
+        #[arg(short, long)]
+        url: String,
+    },
+    /// List active downloads
+    Status,
+    /// Stop the daemon
+    Stop,
+    /// Run in standalone mode
+    Run {
+        /// The URL of the file to download.
+        #[arg(short, long)]
+        url: String,
 
-    /// The number of concurrent download threads to use.
-    #[arg(short = 't', long)]
-    pub threads: Option<u8>,
+        /// The name of the output file. If not provided, defaults to "output.bin".
+        #[arg(short, long)]
+        output: Option<String>,
 
-    /// An optional SHA-256 hash to verify file integrity after download.
-    #[arg(long)]
-    pub verify_sha256: Option<String>,
+        /// The number of concurrent download threads to use.
+        #[arg(short = 't', long)]
+        threads: Option<u8>,
 
-    /// A rate limit in bytes per second (e.g., 1048576 for 1MB/s).
-    #[arg(long)]
-    pub rate_limit: Option<u32>,
+        /// An optional SHA-256 hash to verify file integrity after download.
+        #[arg(long)]
+        verify_sha256: Option<String>,
 
-    /// The directory to save the file in. Defaults to the current directory.
-    #[arg(short = 'd', long)]
-    pub dir: Option<String>,
+        /// A rate limit in bytes per second (e.g., 1048576 for 1MB/s).
+        #[arg(long)]
+        rate_limit: Option<u32>,
 
-    /// File containing a list of URLs to download (one per line).
-    #[arg(short = 'i', long)]
-    pub input: Option<String>,
+        /// The directory to save the file in. Defaults to the current directory.
+        #[arg(short = 'd', long)]
+        dir: Option<String>,
 
-    /// Max number of files to download concurrently (Batch mode only).
-    #[arg(short = 'c', long)]
-    pub concurrent_files: Option<usize>,
+        /// File containing a list of URLs to download (one per line).
+        #[arg(short = 'i', long)]
+        input: Option<String>,
+
+        /// Max number of files to download concurrently (Batch mode only).
+        #[arg(short = 'c', long)]
+        concurrent_files: Option<usize>,
+    },
 }

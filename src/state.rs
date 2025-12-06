@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 /// The range is inclusive, meaning `start` and `end` are both part of the chunk.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Chunk {
+    /// Index of the chunk
+    pub index: usize,
     /// The starting byte index (0-based).
     pub start: u64,
     /// The ending byte index.
@@ -52,11 +54,13 @@ mod tests {
             url: "http://example.com".to_string(),
             chunks: vec![
                 Chunk {
+                    index: 0,
                     start: 0,
                     end: 10,
                     completed: true,
                 },
                 Chunk {
+                    index: 1,
                     start: 11,
                     end: 20,
                     completed: false,

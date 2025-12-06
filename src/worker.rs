@@ -42,6 +42,7 @@ pub async fn download_chunk(
     state: Arc<Mutex<DownloadState>>,
     state_filename: String,
     limiter: Option<ArcRateLimiter>,
+    client: reqwest::Client,
 ) -> Result<()> {
     const MAX_RETRIES: u32 = 5;
     let mut attempt = 0;
@@ -55,7 +56,6 @@ pub async fn download_chunk(
         attempt += 1;
 
         let result = async {
-            let client = reqwest::Client::new();
             let range_header = format!("bytes={}-{}", chunk.start, chunk.end);
 
             let mut response = client

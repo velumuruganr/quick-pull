@@ -16,9 +16,7 @@ use url::Url;
 /// * The network request fails.
 /// * The server returns a non-success status code.
 /// * The server does not provide a `Content-Length` header.
-pub async fn get_file_size(url: &str) -> Result<u64> {
-    let client = reqwest::Client::new();
-
+pub async fn get_file_size(url: &str, client: &reqwest::Client) -> Result<u64> {
     let response = client.head(url).send().await?;
 
     if !response.status().is_success() {

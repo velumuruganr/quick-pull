@@ -5,6 +5,7 @@ use governor::{Quota, RateLimiter};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::sync::Semaphore;
 
@@ -35,12 +36,17 @@ async fn process_url(
 
     let state_result = tokio::fs::read_to_string(&state_filename).await;
 
+    let client = reqwest::Client::builder()
+        .user_agent("ParallelDownloader/0.2")
+        .timeout(Duration::from_secs(30))
+        .build()?;
+
     let download_state = match state_result {
         Ok(json_dats) => {
             let state: DownloadState = serde_json::from_str(&json_dats)?;
 
             if state.url != url {
-                let size = utils::get_file_size(&url).await?;
+                let size = utils::get_file_size(&url, &client).await?;
                 let chunks = utils::calculate_chunks(size, threads as u64);
                 let state = DownloadState {
                     url: url.clone(),
@@ -55,7 +61,7 @@ async fn process_url(
         Err(_) => {
             println!("Starting download for: {}", url);
 
-            let file_size: u64 = utils::get_file_size(&url).await?;
+            let file_size: u64 = utils::get_file_size(&url, &client).await?;
             let file = tokio::fs::File::create(&output_filename).await?;
             file.set_len(file_size).await?;
 
@@ -85,6 +91,7 @@ async fn process_url(
         let state_ref = shared_state.clone();
         let state_file_ref = state_filename.clone();
         let limiter_ref = rate_limiter.clone();
+        let client_ref = client.clone();
 
         let pb = multi_progress.add(ProgressBar::new(chunk.end - chunk.start + 1));
         pb.set_style(
@@ -102,6 +109,7 @@ async fn process_url(
                 state_ref,
                 state_file_ref,
                 limiter_ref,
+                client_ref,
             )
             .await
         });

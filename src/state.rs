@@ -35,3 +35,39 @@ pub async fn save_state(state: &DownloadState, filename: &str) -> Result<()> {
     tokio::fs::write(filename, json).await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test] // Logic uses async fs, so we need the tokio test attribute
+    async fn test_save_and_load_state() -> Result<()> {
+        let dir = tempdir()?; // Create temp folder
+        let file_path = dir.path().join("test.state.json");
+        let path_str = file_path.to_str().unwrap();
+
+        // 1. Create a dummy state
+        let state = DownloadState {
+            url: "http://example.com".to_string(),
+            chunks: vec![
+                Chunk { start: 0, end: 10, completed: true },
+                Chunk { start: 11, end: 20, completed: false },
+            ],
+        };
+
+        // 2. Save it
+        save_state(&state, path_str).await?;
+
+        // 3. Read it back manually to verify JSON structure
+        let content = tokio::fs::read_to_string(path_str).await?;
+        let loaded_state: DownloadState = serde_json::from_str(&content)?;
+
+        assert_eq!(loaded_state.url, "http://example.com");
+        assert_eq!(loaded_state.chunks.len(), 2);
+        assert!(loaded_state.chunks[0].completed);
+        assert!(!loaded_state.chunks[1].completed);
+
+        Ok(())
+    }
+}

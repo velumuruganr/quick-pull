@@ -114,3 +114,60 @@ pub fn verify_file_integrity(path: &str, expected_hash: &str) -> Result<()> {
         Err(anyhow!("File corruption detected: Hash mismatch"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_calculate_chunks_even_split() {
+        // 100 bytes, 4 threads -> should be 25 bytes each
+        let chunks = calculate_chunks(100, 4);
+        assert_eq!(chunks.len(), 4);
+
+        // Chunk 0: 0-24 (25 bytes)
+        assert_eq!(chunks[0].start, 0);
+        assert_eq!(chunks[0].end, 24);
+        
+        // Chunk 3: 75-99 (25 bytes)
+        assert_eq!(chunks[3].start, 75);
+        assert_eq!(chunks[3].end, 99);
+    }
+
+    #[test]
+    fn test_calculate_chunks_remainder() {
+        // 100 bytes, 3 threads -> 33, 33, 34
+        let chunks = calculate_chunks(100, 3);
+        assert_eq!(chunks.len(), 3);
+
+        // Chunk 0: 0-32 (33 bytes)
+        assert_eq!(chunks[0].end - chunks[0].start + 1, 33);
+        
+        // Chunk 2 (Last one): 66-99 (34 bytes)
+        assert_eq!(chunks[2].end - chunks[2].start + 1, 34);
+        assert_eq!(chunks[2].end, 99);
+    }
+
+    #[test]
+    fn test_verify_integrity() -> Result<()> {
+        // 1. Create a temp file with known content
+        let mut temp_file = NamedTempFile::new()?;
+        write!(temp_file, "Hello Rust")?;
+        
+        // "Hello Rust" SHA-256 hash
+        let expected_hash = "DC5D63134FB696626C4BF28E1232434AB040ACC10A66CFEE55DACDD70DAE82A3";
+        
+        // 2. Verify it passes
+        let path = temp_file.path().to_str().unwrap();
+        let result = verify_file_integrity(path, expected_hash);
+        assert!(result.is_ok());
+
+        // 3. Verify it fails with wrong hash
+        let result = verify_file_integrity(path, "badhash123");
+        assert!(result.is_err());
+
+        Ok(())
+    }
+}

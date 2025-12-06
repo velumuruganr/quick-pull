@@ -10,15 +10,26 @@ use std::path::PathBuf;
 use parallel_downloader::state;
 use parallel_downloader::utils;
 use parallel_downloader::{ArcRateLimiter, Args, DownloadState, download_chunk};
+use parallel_downloader::config::Settings;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let settings = Settings::load().unwrap_or_default();
+
     let args = Args::parse();
+
+    let threads = args.threads
+        .or(settings.threads)
+        .unwrap_or(4);
+
+    let rate_limit_val = args.rate_limit
+        .or(settings.rate_limit);
+
+    let directory = args.dir.or(settings.default_dir).unwrap_or_else(|| ".".to_string());
+
     let filename = args
         .output
         .unwrap_or_else(|| utils::get_filename_from_url(&args.url));
-
-    let directory = args.dir.unwrap_or_else(|| ".".to_string());
 
     let mut output_path = PathBuf::from(&directory);
     output_path.push(filename);
@@ -51,7 +62,7 @@ async fn main() -> Result<()> {
             let file = tokio::fs::File::create(&output_filename).await?;
             file.set_len(file_size).await?;
 
-            let chunks = utils::calculate_chunks(file_size, args.threads as u64);
+            let chunks = utils::calculate_chunks(file_size, threads as u64);
 
             let state = DownloadState {
                 url: args.url.clone(),
@@ -65,7 +76,7 @@ async fn main() -> Result<()> {
 
     let shared_state = Arc::new(Mutex::new(download_state));
 
-    let rate_limiter: Option<ArcRateLimiter> = if let Some(bytes_per_sec) = args.rate_limit {
+    let rate_limiter: Option<ArcRateLimiter> = if let Some(bytes_per_sec) = rate_limit_val {
         if bytes_per_sec > 0 {
             println!("Rate Limiting enabled: {} bytes/sec", bytes_per_sec);
 

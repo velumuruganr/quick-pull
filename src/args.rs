@@ -16,8 +16,8 @@ pub struct Args {
     pub output: Option<String>,
 
     /// The number of concurrent download threads to use.
-    #[arg(short = 't', long, default_value_t = 4)]
-    pub threads: u8,
+    #[arg(short = 't', long)]
+    pub threads: Option<u8>,
 
     /// An optional SHA-256 hash to verify file integrity after download.
     #[arg(long)]

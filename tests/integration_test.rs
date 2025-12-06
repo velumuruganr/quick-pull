@@ -1,18 +1,17 @@
-use wiremock::matchers::{method, header};
-use wiremock::{Mock, MockServer, ResponseTemplate};
 use indicatif::ProgressBar;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tempfile::NamedTempFile;
+use tokio::sync::Mutex;
+use wiremock::matchers::{header, method};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use rfetch::state::{Chunk, DownloadState};
 use rfetch::worker::download_chunk;
 
-
 #[tokio::test]
 async fn test_download_single_chunk() {
     let mock_server = MockServer::start().await;
-    
+
     Mock::given(method("GET"))
         .and(header("Range", "bytes=0-10"))
         .respond_with(ResponseTemplate::new(200).set_body_string("Hello World"))
@@ -25,21 +24,30 @@ async fn test_download_single_chunk() {
 
     let state = Arc::new(Mutex::new(DownloadState {
         url: mock_server.uri(),
-        chunks: vec![Chunk { start: 0, end: 10, completed: false }],
+        chunks: vec![Chunk {
+            start: 0,
+            end: 10,
+            completed: false,
+        }],
     }));
 
-    let chunk = Chunk { start: 0, end: 10, completed: false };
+    let chunk = Chunk {
+        start: 0,
+        end: 10,
+        completed: false,
+    };
     let pb = ProgressBar::hidden(); // Invisible progress bar for testing
 
     let result = download_chunk(
-        0, 
-        chunk, 
-        output_path.clone(), 
-        pb, 
-        state.clone(), 
-        state_path.clone(), 
-        None // No rate limiter
-    ).await;
+        0,
+        chunk,
+        output_path.clone(),
+        pb,
+        state.clone(),
+        state_path.clone(),
+        None, // No rate limiter
+    )
+    .await;
 
     assert!(result.is_ok());
 

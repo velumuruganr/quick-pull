@@ -1,5 +1,5 @@
 //! # rfetch Download Library
-//! 
+//!
 //! `rfetch` is a library for performing robust, concurrent file downloads.
 //! It supports features like:
 //! - Multi-threaded downloading
@@ -7,9 +7,9 @@
 //! - Automatic retries on network failure
 //! - Rate limiting (throttling)
 //! - SHA-256 integrity verification
-//! 
+//!
 //! ## Example Usage
-//! 
+//!
 //! Note: This library is primarily designed to be used by the binary, but the internal
 //! components are exposed for custom implementations.
 

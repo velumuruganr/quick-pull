@@ -8,7 +8,7 @@ use std::io::Read;
 /// fetches the Content-Length of a file from a URL using a HEAD request.
 ///
 /// # Errors
-/// 
+///
 /// Returns an error if:
 /// * The network request fails.
 /// * The server returns a non-success status code.
@@ -36,7 +36,7 @@ pub async fn get_file_size(url: &str) -> Result<u64> {
 }
 
 /// Divides a total file size into equal-sized chunks for concurrent downloading.
-/// 
+///
 /// The last chunk will automatically expand to cover any remainder bytes.
 pub fn calculate_chunks(total_size: u64, num_threads: u64) -> Vec<Chunk> {
     let mut chunks = Vec::new();
@@ -62,14 +62,14 @@ pub fn calculate_chunks(total_size: u64, num_threads: u64) -> Vec<Chunk> {
 }
 
 /// Calculates the SHA-256 hash of a file and compares it to an expected hash.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `path` - The path to the file on disk.
 /// * `expected_hash` - The hex-encoded SHA-256 string to compare against.
-/// 
+///
 /// # Returns
-/// 
+///
 /// Returns `Ok(())` if the hashes match. Returns an `Err` if they do not match
 /// or if the file cannot be read.
 pub fn verify_file_integrity(path: &str, expected_hash: &str) -> Result<()> {
@@ -130,7 +130,7 @@ mod tests {
         // Chunk 0: 0-24 (25 bytes)
         assert_eq!(chunks[0].start, 0);
         assert_eq!(chunks[0].end, 24);
-        
+
         // Chunk 3: 75-99 (25 bytes)
         assert_eq!(chunks[3].start, 75);
         assert_eq!(chunks[3].end, 99);
@@ -144,7 +144,7 @@ mod tests {
 
         // Chunk 0: 0-32 (33 bytes)
         assert_eq!(chunks[0].end - chunks[0].start + 1, 33);
-        
+
         // Chunk 2 (Last one): 66-99 (34 bytes)
         assert_eq!(chunks[2].end - chunks[2].start + 1, 34);
         assert_eq!(chunks[2].end, 99);
@@ -155,10 +155,10 @@ mod tests {
         // 1. Create a temp file with known content
         let mut temp_file = NamedTempFile::new()?;
         write!(temp_file, "Hello Rust")?;
-        
+
         // "Hello Rust" SHA-256 hash
         let expected_hash = "DC5D63134FB696626C4BF28E1232434AB040ACC10A66CFEE55DACDD70DAE82A3";
-        
+
         // 2. Verify it passes
         let path = temp_file.path().to_str().unwrap();
         let result = verify_file_integrity(path, expected_hash);

@@ -1,7 +1,7 @@
 use clap::Parser;
 
 /// A robust, concurrent file downloader.
-/// 
+///
 /// This tool splits files into chunks and downloads them in parallel,
 /// with support for resuming and rate limiting.
 #[derive(Parser, Debug)]

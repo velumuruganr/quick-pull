@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 /// Represents a specific range of bytes within a file to be downloaded.
-/// 
+///
 /// The range is inclusive, meaning `start` and `end` are both part of the chunk.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Chunk {
@@ -15,7 +15,7 @@ pub struct Chunk {
 }
 
 /// Represents the persistent state of a download operation.
-/// 
+///
 /// This struct is serialized to JSON to allow resuming downloads after a crash.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadState {
@@ -26,9 +26,9 @@ pub struct DownloadState {
 }
 
 /// Saves the current download state to a JSON file.
-/// 
+///
 /// # Errors
-/// 
+///
 /// This function will return an error if the file cannot be created or written to.
 pub async fn save_state(state: &DownloadState, filename: &str) -> Result<()> {
     let json = serde_json::to_string_pretty(state)?;
@@ -51,8 +51,16 @@ mod tests {
         let state = DownloadState {
             url: "http://example.com".to_string(),
             chunks: vec![
-                Chunk { start: 0, end: 10, completed: true },
-                Chunk { start: 11, end: 20, completed: false },
+                Chunk {
+                    start: 0,
+                    end: 10,
+                    completed: true,
+                },
+                Chunk {
+                    start: 11,
+                    end: 20,
+                    completed: false,
+                },
             ],
         };
 

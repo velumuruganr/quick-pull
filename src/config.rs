@@ -9,11 +9,13 @@ use serde::Deserialize;
 /// * `threads` - Default number of concurrent download threads.
 /// * `rate_limit` - Default rate limit in bytes per second.
 /// * `default_dir` - Default directory to save downloaded files.
+/// * `concurrent_files` - Default number of files to download at a time.
 #[derive(Debug, Deserialize, Default)]
 pub struct Settings {
     pub threads: Option<u8>,
     pub rate_limit: Option<u32>,
     pub default_dir: Option<String>,
+    pub concurrent_files: Option<usize>,
 }
 
 impl Settings {

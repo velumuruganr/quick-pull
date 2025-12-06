@@ -30,4 +30,12 @@ pub struct Args {
     /// The directory to save the file in. Defaults to the current directory.
     #[arg(short = 'd', long)]
     pub dir: Option<String>,
+
+    /// File containing a list of URLs to download (one per line).
+    #[arg(short = 'i', long)]
+    pub input: Option<String>,
+
+    /// Max number of files to download concurrently (Batch mode only).
+    #[arg(short = 'c', long)]
+    pub concurrent_files: Option<usize>,
 }

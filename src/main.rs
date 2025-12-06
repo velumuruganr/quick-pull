@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use clap::Parser;
 use futures_util::future::join_all;
 use governor::{Quota, RateLimiter};
@@ -6,36 +6,28 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio::sync::Semaphore;
 
 use parallel_downloader::config::Settings;
 use parallel_downloader::state;
 use parallel_downloader::utils;
 use parallel_downloader::{ArcRateLimiter, Args, DownloadState, download_chunk};
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    let settings = Settings::load().unwrap_or_default();
+async fn process_url(
+    url: String,
+    output_dir: String,
+    output_filename: Option<String>,
+    threads: u8,
+    rate_limiter: Option<ArcRateLimiter>,
+    verify_hash: Option<String>,
+    multi_progress: MultiProgress,
+) -> Result<()> {
+    let filename = output_filename.unwrap_or(utils::get_filename_from_url(&url));
+    let mut output_path = PathBuf::from(&output_dir);
+    output_path.push(&filename);
 
-    let args = Args::parse();
-
-    let threads = args.threads.or(settings.threads).unwrap_or(4);
-
-    let rate_limit_val = args.rate_limit.or(settings.rate_limit);
-
-    let directory = args
-        .dir
-        .or(settings.default_dir)
-        .unwrap_or_else(|| ".".to_string());
-
-    let filename = args
-        .output
-        .unwrap_or_else(|| utils::get_filename_from_url(&args.url));
-
-    let mut output_path = PathBuf::from(&directory);
-    output_path.push(filename);
-
-    if directory != "." {
-        tokio::fs::create_dir_all(&directory).await?;
+    if output_dir != "." {
+        tokio::fs::create_dir_all(&output_dir).await?;
     }
 
     let output_filename = output_path.to_string_lossy().to_string();
@@ -45,27 +37,32 @@ async fn main() -> Result<()> {
 
     let download_state = match state_result {
         Ok(json_dats) => {
-            println!("Resuming download...");
             let state: DownloadState = serde_json::from_str(&json_dats)?;
 
-            if state.url != args.url {
-                return Err(anyhow!("State file URL does not match argument URL!"));
+            if state.url != url {
+                let size = utils::get_file_size(&url).await?;
+                let chunks = utils::calculate_chunks(size, threads as u64);
+                let state = DownloadState {
+                    url: url.clone(),
+                    chunks,
+                };
+                state::save_state(&state, &state_filename).await?;
+                state
+            } else {
+                state
             }
-            state
         }
         Err(_) => {
-            println!("Starting download for: {}", args.url);
+            println!("Starting download for: {}", url);
 
-            let file_size: u64 = utils::get_file_size(&args.url).await?;
-            println!("File Size: {}", file_size);
-
+            let file_size: u64 = utils::get_file_size(&url).await?;
             let file = tokio::fs::File::create(&output_filename).await?;
             file.set_len(file_size).await?;
 
             let chunks = utils::calculate_chunks(file_size, threads as u64);
 
             let state = DownloadState {
-                url: args.url.clone(),
+                url: url.clone(),
                 chunks,
             };
 
@@ -76,33 +73,11 @@ async fn main() -> Result<()> {
 
     let shared_state = Arc::new(Mutex::new(download_state));
 
-    let rate_limiter: Option<ArcRateLimiter> = if let Some(bytes_per_sec) = rate_limit_val {
-        if bytes_per_sec > 0 {
-            println!("Rate Limiting enabled: {} bytes/sec", bytes_per_sec);
-
-            let quota = Quota::per_second(std::num::NonZeroU32::new(bytes_per_sec).unwrap());
-            Some(Arc::new(RateLimiter::direct(quota)))
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
-    let multi_progress = MultiProgress::new();
-
-    let style = ProgressStyle::with_template(
-        "{msg} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})",
-    )
-    .unwrap()
-    .progress_chars("=>-");
-
     let mut tasks = Vec::new();
 
     let chunks_to_process = shared_state.lock().await.chunks.clone();
     for (i, chunk) in chunks_to_process.into_iter().enumerate() {
         if chunk.completed {
-            println!("Skipping chunk {} (already done)", i + 1);
             continue;
         }
 
@@ -112,8 +87,12 @@ async fn main() -> Result<()> {
         let limiter_ref = rate_limiter.clone();
 
         let pb = multi_progress.add(ProgressBar::new(chunk.end - chunk.start + 1));
-        pb.set_style(style.clone());
-        pb.set_message(format!("Thread: {}", i + 1));
+        pb.set_style(
+            ProgressStyle::with_template("{msg} {bar:40.cyan/blue} {bytes}/{total_bytes}")
+                .unwrap()
+                .progress_chars("=>-"),
+        );
+        pb.set_message(format!("{} [Part {}]", filename, i + 1));
         let task = tokio::spawn(async move {
             download_chunk(
                 i,
@@ -130,27 +109,125 @@ async fn main() -> Result<()> {
         tasks.push(task);
     }
 
-    if tasks.is_empty() {
-        println!("All chunks already complete!");
-        return Ok(());
+    if !tasks.is_empty() {
+        let results = join_all(tasks).await;
+        for result in results {
+            result??;
+        }
     }
 
-    let results = join_all(tasks).await;
-
-    for result in results {
-        result??;
-    }
-
-    println!("Download completed.");
     tokio::fs::remove_file(&state_filename).await?;
 
-    if let Some(expected_hash) = args.verify_sha256 {
+    if let Some(expected_hash) = verify_hash {
         let output_filename = output_filename.clone();
 
         tokio::task::spawn_blocking(move || {
             utils::verify_file_integrity(&output_filename, &expected_hash)
         })
         .await??;
+    }
+
+    let _ = multi_progress.println(format!("✅ Finished {}", filename));
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let settings = Settings::load().unwrap_or_default();
+    let args = Args::parse();
+
+    let threads = args.threads.or(settings.threads).unwrap_or(4);
+    let rate_limit_val = args.rate_limit.or(settings.rate_limit);
+    let default_dir = args
+        .dir
+        .or(settings.default_dir)
+        .unwrap_or_else(|| ".".to_string());
+    let concurrent_files = args
+        .concurrent_files
+        .or(settings.concurrent_files)
+        .unwrap_or(3);
+
+    let rate_limiter: Option<ArcRateLimiter> = if let Some(bytes_per_sec) = rate_limit_val {
+        if bytes_per_sec > 0 {
+            let quota = Quota::per_second(std::num::NonZeroU32::new(bytes_per_sec).unwrap());
+            Some(Arc::new(RateLimiter::direct(quota)))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let multi_progress = MultiProgress::new();
+
+    if let Some(input_file) = args.input {
+        let mut warnings = Vec::new();
+
+        if args.output.is_some() {
+            warnings.push("⚠️  Warning: The --output / -o flag is ignored in batch mode.\n   Files will be named automatically based on their URLs.");
+        }
+
+        if args.verify_sha256.is_some() {
+            warnings.push("⚠️  Warning: The --verify-sha256 flag is ignored in batch mode.\n   Cannot verify multiple different files against a single hash.");
+        }
+
+        if !warnings.is_empty() {
+            for w in warnings {
+                eprintln!("{}", w);
+            }
+            eprintln!("   (Downloads will proceed without these settings)\n");
+        }
+
+        println!("🚀 Starting Batch Download from {}", input_file);
+
+        let content = tokio::fs::read_to_string(&input_file).await?;
+        let urls: Vec<String> = content
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect();
+
+        // SEMAPHORE: Limit global concurrent files
+        // If args.concurrent_files is 3, only 3 files download at once.
+        let semaphore = Arc::new(Semaphore::new(concurrent_files));
+        let mut file_tasks = Vec::new();
+
+        for url in urls {
+            let sem_clone = semaphore.clone();
+            let mp_clone = multi_progress.clone();
+
+            let dir = default_dir.clone();
+            let limiter = rate_limiter.clone();
+
+            let task = tokio::spawn(async move {
+                let _permit = sem_clone.acquire().await.unwrap();
+
+                if let Err(e) =
+                    process_url(url.clone(), dir, None, threads, limiter, None, mp_clone).await
+                {
+                    eprintln!("❌ Failed to download {}: {}", url, e);
+                }
+            });
+
+            file_tasks.push(task);
+        }
+
+        join_all(file_tasks).await;
+    } else {
+        let url = args.url.clone();
+
+        process_url(
+            url,
+            default_dir,
+            args.output,
+            threads,
+            rate_limiter,
+            args.verify_sha256,
+            multi_progress,
+        )
+        .await?;
+
+        println!("Download Completed!");
     }
 
     Ok(())

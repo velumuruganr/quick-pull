@@ -2,6 +2,8 @@
 name = "rfetch"
 version = "0.1.0"
 edition = "2024"
+description = "A robust, concurrent file downloader designed to be resilient, supporting automatic retries, crash recovery, and download verification."
+license = "MIT"
 
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }

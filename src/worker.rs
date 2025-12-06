@@ -79,10 +79,10 @@ pub async fn download_chunk(
             while let Some(response_bytes) = response.chunk().await? {
                 let len = response_bytes.len() as u32;
 
-                if let Some(ref l) = limiter {
-                    if let Some(n) = std::num::NonZeroU32::new(len) {
-                        l.until_n_ready(n).await.unwrap();
-                    }
+                if let Some(ref l) = limiter
+                    && let Some(n) = std::num::NonZeroU32::new(len)
+                {
+                    l.until_n_ready(n).await.unwrap();
                 }
 
                 pb.inc(response_bytes.len() as u64);

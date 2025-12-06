@@ -1,5 +1,5 @@
 [package]
-name = "rfetch"
+name = "parallel_downloader"
 version = "0.1.0"
 edition = "2024"
 description = "A robust, concurrent file downloader designed to be resilient, supporting automatic retries, crash recovery, and download verification."

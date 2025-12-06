@@ -6,9 +6,9 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use rfetch::state;
-use rfetch::utils;
-use rfetch::{ArcRateLimiter, Args, DownloadState, download_chunk};
+use parallel_downloader::state;
+use parallel_downloader::utils;
+use parallel_downloader::{ArcRateLimiter, Args, DownloadState, download_chunk};
 
 #[tokio::main]
 async fn main() -> Result<()> {

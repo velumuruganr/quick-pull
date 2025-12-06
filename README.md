@@ -1,4 +1,4 @@
-# rfetch Downloader 🦀
+# parallel_downloader Downloader 🦀
 
 A robust, concurrent file downloader built in Rust. It is designed to be resilient, supporting automatic retries, crash recovery, and download verification.
 
@@ -16,11 +16,11 @@ A robust, concurrent file downloader built in Rust. It is designed to be resilie
 Ensure you have Rust installed. Clone the repository and build:
 
 ```bash
-git clone https://github.com/velumuruganr/rfetch.git
-cd rfetch
+git clone https://github.com/velumuruganr/parallel_downloader.git
+cd parallel_downloader
 cargo build --release
 ```
-The binary will be located in ./target/release/rfetch
+The binary will be located in ./target/release/parallel_downloader
 
 ## 🛠 Usage
 
@@ -54,18 +54,18 @@ cargo run -- \
 
 ## 📚 Library Usage
 
-You can use rfetch as a library in your own project.
+You can use parallel_downloader as a library in your own project.
 
 Add to your `Cargo.toml`:
 ```
 [dependencies]
-rfetch = { path = "../path/to/rfetch" }
+parallel_downloader = { path = "../path/to/parallel_downloader" }
 ```
 
 Use the modules in your code:
 ```Rust
-use rfetch::utils::get_file_size;
-use rfetch::worker::download_chunk;
+use parallel_downloader::utils::get_file_size;
+use parallel_downloader::worker::download_chunk;
 
 #[tokio::main]
 async fn main() {

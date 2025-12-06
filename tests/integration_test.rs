@@ -5,8 +5,8 @@ use tokio::sync::Mutex;
 use wiremock::matchers::{header, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use rfetch::state::{Chunk, DownloadState};
-use rfetch::worker::download_chunk;
+use parallel_downloader::state::{Chunk, DownloadState};
+use parallel_downloader::worker::download_chunk;
 
 #[tokio::test]
 async fn test_download_single_chunk() {

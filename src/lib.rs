@@ -1,6 +1,6 @@
-//! # rfetch Download Library
+//! # parallel_downloader Download Library
 //!
-//! `rfetch` is a library for performing robust, concurrent file downloads.
+//! `parallel_downloader` is a library for performing robust, concurrent file downloads.
 //! It supports features like:
 //! - Multi-threaded downloading
 //! - Resuming interrupted downloads

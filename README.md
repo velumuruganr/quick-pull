@@ -1,4 +1,4 @@
-# parallel_downloader Downloader 🦀
+# Parallel Downloader 🦀
 
 A robust, concurrent file downloader built in Rust. It is designed to be resilient, supporting automatic retries, crash recovery, and download verification.
 

@@ -67,21 +67,27 @@ Best for long-running servers or managing queues.
 pd start
 
 # 2. Add downloads from any terminal
-pd add --url "[https://example.com/file1.zip](https://example.com/file1.zip)"
-pd add --url "[https://example.com/file2.zip](https://example.com/file2.zip)"
+pd add --url "https://example.com/file1.zip"
+pd add --url "https://example.com/file2.zip"
 
 # 3. Check status
 pd status
+
+# 4. Shutdown
+pd stop
 ```
 
 ## Options
-| Flag              | Description                                       | Default       |
-|-------------------|---------------------------------------------------|---------------|
-| `--url`           | The URL to download                               | Required      |
-| `--output`, `-o`  | Output filename                                   | `output.bin`  |
-| `--threads`, `-t` | Number of concurrent threads                      | `4`           |
-| `--rate-limit`    | Max speed in bytes/sec (e.g., 1048576 = 1MB/s)    | Unlimited     |
-| `--verify-sha256` | Hash string to verify file integrity              | None          |
+| Flag                       | Description                                       | Default       |
+|----------------------------|---------------------------------------------------|---------------|
+| `--url`, `-u`              | The URL to download                               | Required      |
+| `--output`, `-o`           | Output filename                                   | `output.bin`  |
+| `--threads`, `-t`          | Number of concurrent threads                      | `4`           |
+| `--rate-limit`             | Max speed in bytes/sec (e.g., 1048576 = 1MB/s)    | Unlimited     |
+| `--verify-sha256`          | Hash string to verify file integrity              | None          |
+| `--dir`, `-d`              | Directory to store downloads                      | Current Dir   |
+| `--input`, `-i`            | Input file with list of URLs (one per line)       | None          |
+| `--concurrent_files`, `-c` | Number of concurrent downloads in batch mode      | `2`           |
 
 ## 📚 Library Usage
 

@@ -1,6 +1,9 @@
-# Parallel Downloader 🦀
+# Parallel Downloader (pd) 🦀
 
 A robust, concurrent file downloader built in Rust. It is designed to be resilient, supporting automatic retries, crash recovery, and download verification.
+
+[![Build Status](https://github.com/velumuruganr/parallel_downloader/actions/workflows/rust.yml/badge.svg)](https://github.com/velumuruganr/parallel_downloader/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🚀 Features
 
@@ -10,46 +13,65 @@ A robust, concurrent file downloader built in Rust. It is designed to be resilie
 * **Rate Limiting:** Optional token-bucket throttling to limit bandwidth usage.
 * **Integrity Check:** Verifies the final file against a SHA-256 hash.
 * **Library Support:** Logic is separated from the CLI, allowing you to use the core downloader in your own Rust applications.
+* **🧠 Batch Processing:**
+    * Supports a Daemon mode (`pd start`) for background management.
+    * Accepts input files (`-i list.txt`) for bulk downloads.
+---
 
 ## 📦 Installation
 
-### Option 1: Install Globally (Recommended)
-This will install the `pd` command to your system so you can run it from any folder.
+### Pre-built Binaries
+Download the latest release for Windows, Linux, or macOS from the [Releases Page](https://github.com/velumuruganr/parallel_downloader/releases).
 
+### Build from Source
 ```bash
 git clone https://github.com/yourusername/parallel_downloader.git
 cd parallel_downloader
 cargo install --path .
 ```
-You can now run pd from anywhere in your terminal.
-
-### Option 2: Build Locally
-If you prefer not to install it globally:
-
-```bash
-cargo build --release
-```
-The binary will be located at ./target/release/pd
 
 ## 🛠 Usage
 
-### Basic Download
+**1. Standalone Mode (CLI)**
 
-Download a file with default settings (4 threads).
+Best for quick, one-off downloads.
+
 ```bash
-pd --url "https://proof.ovh.net/files/100Mb.dat"
+# Simple download (defaults to 4 threads)
+pd run --url "https://example.com/large.iso"
+
+# Advanced Usage
+pd run \
+  --url "https://example.com/movie.mp4" \
+  --output "holiday.mp4" \
+  --threads 8 \
+  --rate-limit 1048576 \
+  --dir ./downloads
 ```
 
-### Advanced Usage
+**2. Batch Mode**
 
-Combine flags for a specific use case:
+Download a list of URLs (one per line).
+
 ```bash
-pd \
-  --url "https://proof.ovh.net/files/100Mb.dat" \
-  --output "my_video.dat" \
-  --threads 8 \
-  --rate-limit 512000 \
-  --verify-sha256 "a1b2c3d4..."
+# Download files from list.txt, 3 files at a time
+pd run -i list.txt -c 3
+```
+
+**3. Daemon Mode (Background Service)**
+
+Best for long-running servers or managing queues.
+
+```bash
+# 1. Start the daemon in a separate terminal
+pd start
+
+# 2. Add downloads from any terminal
+pd add --url "[https://example.com/file1.zip](https://example.com/file1.zip)"
+pd add --url "[https://example.com/file2.zip](https://example.com/file2.zip)"
+
+# 3. Check status
+pd status
 ```
 
 ## Options
@@ -63,31 +85,23 @@ pd \
 
 ## 📚 Library Usage
 
-You can use parallel_downloader as a library in your own project.
+You can use `parallel_downloader` as a library in your own project.
 
 Add to your `Cargo.toml`:
-```
-[dependencies]
-parallel_downloader = { path = "../path/to/parallel_downloader" }
-```
 
+```ini,toml
+[dependencies]
+parallel_downloader = { version = "0.2", default-features = false }
+```
 Use the modules in your code:
 ```rust
-use parallel_downloader::utils::get_file_size;
+use parallel_downloader::downloader::prepare_download;
 use parallel_downloader::worker::download_chunk;
-
-#[tokio::main]
-async fn main() {
-    let size = get_file_size("https://example.com/file.zip").await.unwrap();
-    println!("File size: {}", size);
-}
 ```
 
 ## 🧪 Testing
-Run the test suite, which includes unit tests for math/hashing and integration tests using a mock HTTP server.
+
+We use `wiremock` to simulate HTTP failures and chunk ranges without hitting real servers.
 ```bash
 cargo test
 ```
-
-## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

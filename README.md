@@ -25,7 +25,7 @@ Download the latest release for Windows, Linux, or macOS from the [Releases Page
 
 ### Build from Source
 ```bash
-git clone https://github.com/yourusername/parallel_downloader.git
+git clone https://github.com/velumuruganr/parallel_downloader.git
 cd parallel_downloader
 cargo install --path .
 ```
@@ -95,6 +95,33 @@ pd stop
 | `--dir`, `-d`              | Directory to store downloads                      | Current Dir   |
 | `--input`, `-i`            | Input file with list of URLs (one per line)       | None          |
 | `--concurrent_files`, `-c` | Number of concurrent downloads in batch mode      | `3`           |
+
+## Configuration
+
+This project supports reading settings from a `config.toml` file or from
+environment variables prefixed with `PD`.
+
+- File locations (platform-specific):
+  - Linux:   `~/.config/pd/config.toml`
+  - macOS:   `~/Library/Application Support/pd/config.toml`
+  - Windows: `%APPDATA%\pd\config.toml`
+
+- Example: copy `config.example.toml` to one of the locations above and edit
+  values such as `threads`, `rate_limit`, `default_dir`, and
+  `concurrent_files`.
+
+- Environment variables: you can override values via environment variables using
+  `__` as a separator. For example:
+
+```bash
+# set threads to 8
+export PD__threads=8
+
+# set global rate limit to 1 MiB/s
+export PD__rate_limit=1048576
+```
+
+Environment variables take precedence over values found in `config.toml`.
 
 ## 📚 Library Usage
 

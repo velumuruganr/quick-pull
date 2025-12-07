@@ -1,0 +1,28 @@
+## Example `config.toml` for Parallel Downloader (pd)
+##
+## Save this file as the application config (platform-specific):
+##  - Linux:   ~/.config/pd/config.toml
+##  - macOS:   ~/Library/Application Support/pd/config.toml
+##  - Windows: %APPDATA%\pd\config.toml
+##
+## Alternatively you can set environment variables prefixed with `PD`
+## using `__` as a separator, for example:
+##   PD__threads=8
+##   PD__rate_limit=1048576
+
+# Default number of concurrent download threads per file
+threads = 4
+
+# Optional global rate limit in bytes/second. Omit or set to 0 for unlimited.
+# Example: 1 MiB/s = 1048576
+rate_limit = 1048576
+
+# Default directory to save downloads (relative or absolute path)
+default_dir = "./downloads"
+
+# Number of files to download concurrently in batch mode
+concurrent_files = 3
+
+# --- Notes ---
+# - All fields are optional. The CLI uses defaults if values are missing.
+# - Environment variables take precedence over values in the file.

@@ -1,3 +1,7 @@
+//! Utility helpers used across the crate.
+//!
+//! Small convenience functions for HTTP metadata, filename extraction,
+//! chunk calculation, and file integrity verification.
 use crate::state::Chunk;
 use anyhow::{Result, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};

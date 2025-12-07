@@ -1,3 +1,7 @@
+//! Configuration loader and typed settings for the application.
+//!
+//! Loads configuration from a user config file (platform-appropriate
+//! location) and environment variables prefixed with `PD__`.
 use anyhow::Result;
 use config::{Config, Environment, File};
 use directories::ProjectDirs;

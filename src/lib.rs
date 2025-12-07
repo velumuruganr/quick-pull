@@ -1,19 +1,22 @@
-//! # parallel_downloader Download Library
+//! parallel_downloader — download library
 //!
-//! `parallel_downloader` is a library for performing robust, concurrent file downloads.
-//! It supports features like:
-//! - Multi-threaded downloading
-//! - Resuming interrupted downloads
-//! - Automatic retries on network failure
-//! - Rate limiting (throttling)
-//! - SHA-256 integrity verification
+//! `parallel_downloader` provides a small, composable API for performing
+//! robust concurrent downloads with support for resuming, retries,
+//! optional rate limiting and SHA-256 verification.
 //!
-//! ## Example Usage
+//! The library is written so the CLI can reuse the same primitives; you can
+//! also embed the downloader in your own programs by calling the helpers
+//! exposed below.
 //!
-//! Note: This library is primarily designed to be used by the binary, but the internal
-//! components are exposed for custom implementations.
+//! # Example
+//!
+//! ```no_run
+//! use parallel_downloader::downloader::prepare_download;
+//! use parallel_downloader::worker::download_chunk;
+//! // Build a `reqwest::Client`, call `prepare_download` to get a `DownloadState`,
+//! // then spawn `download_chunk` tasks for each chunk.
+//! ```
 
-pub mod args;
 pub mod config;
 pub mod daemon;
 pub mod downloader;
@@ -23,6 +26,5 @@ pub mod state;
 pub mod utils;
 pub mod worker;
 
-pub use args::Args;
 pub use state::DownloadState;
 pub use worker::{ArcRateLimiter, download_chunk};

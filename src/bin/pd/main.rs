@@ -1,16 +1,21 @@
+//! Command-line binary entrypoint for `pd`.
+//!
+//! This module contains the small CLI glue that parses arguments and
+//! either runs a standalone download or sends commands to the daemon.
+mod args;
+
 use anyhow::Result;
+use args::{Args, Commands};
 use clap::Parser;
 use futures_util::future::join_all;
 use governor::{Quota, RateLimiter};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use parallel_downloader::args::Commands;
 use parallel_downloader::config::Settings;
 use parallel_downloader::downloader;
 use parallel_downloader::ipc::{Command, Response};
 use parallel_downloader::observer::ConsoleObserver;
 use parallel_downloader::utils;
-
-use parallel_downloader::{ArcRateLimiter, Args, download_chunk};
+use parallel_downloader::{ArcRateLimiter, download_chunk};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -19,6 +24,7 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio::sync::Semaphore;
 
+/// Connect to the local daemon and send a `Command`.
 async fn send_command(cmd: Command) -> Result<()> {
     let mut stream = TcpStream::connect("127.0.0.1:9090".to_string())
         .await
@@ -54,6 +60,10 @@ async fn send_command(cmd: Command) -> Result<()> {
     Ok(())
 }
 
+/// Download a single URL using the downloader library and progress bars.
+///
+/// This helper prepares the download workspace, spawns chunk tasks and
+/// optionally runs a SHA-256 integrity check when `verify_hash` is provided.
 async fn process_url(
     url: String,
     output_dir: String,

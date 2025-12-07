@@ -1,9 +1,28 @@
-// src/downloader.rs
-use crate::state::{self, DownloadState};
-use crate::utils;
+//! Helpers for preparing and initializing download operations.
+//!
+//! This module contains functions to create or resume a download by
+//! managing the persistent `*.state.json` file, pre-allocating the
+//! destination file, and returning a `DownloadState` describing chunks.
+//!
+//! # Example
+//!
+//! ```no_run
+//! # async {
+//! let client = reqwest::Client::new();
+//! let (state, state_filename, size) = parallel_downloader::downloader::prepare_download(
+//!     "https://example.com/file.bin",
+//!     "output.bin".to_string(),
+//!     4,
+//!     &client,
+//! ).await.unwrap();
+//! # };
+//! ```
 use anyhow::Result;
 use reqwest::Client;
 use tokio::fs;
+
+use crate::state::{self, DownloadState};
+use crate::utils;
 
 /// Prepares a download by either loading an existing state or creating a new one.
 ///

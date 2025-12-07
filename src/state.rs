@@ -1,3 +1,7 @@
+//! Persistent download state and helpers.
+//!
+//! The structures in this module are serialized to disk as JSON to enable
+//! crash recovery and resuming partially completed downloads.
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 

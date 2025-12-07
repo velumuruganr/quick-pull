@@ -1,14 +1,27 @@
+//! Progress observers used by workers to report progress.
+//!
+//! Implementations of `ProgressObserver` are used by the workers to
+//! update either a console-based progress bar or the daemon's in-memory
+//! job tracking structure.
 use crate::daemon::ActiveJobData;
 use indicatif::ProgressBar;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
+/// Trait implemented by progress observers used while downloading.
+///
+/// Implementors receive small updates (increments), finalization
+/// notifications and textual messages to display to the user or UI.
 pub trait ProgressObserver: Send + Sync {
+    /// Increment the observer by `delta` bytes.
     fn inc(&self, delta: u64);
+    /// Called when the observed work is finished.
     fn finish(&self);
+    /// Send a short human-readable message to the observer/UI.
     fn message(&self, message: String);
 }
 
+/// A console-based observer that updates an `indicatif::ProgressBar`.
 pub struct ConsoleObserver {
     pub pb: ProgressBar,
 }
@@ -27,6 +40,7 @@ impl ProgressObserver for ConsoleObserver {
     }
 }
 
+/// An observer used when running as a daemon; updates the shared job state.
 pub struct DaemonObserver {
     pub job_data: Arc<ActiveJobData>,
 }

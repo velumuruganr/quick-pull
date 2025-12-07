@@ -30,6 +30,13 @@ cd parallel_downloader
 cargo install --path .
 ```
 
+Note: The CLI binary is provided in `src/bin/pd/main.rs` (the CLI glue is in `src/bin/pd/`). When developing from source you can run the binary directly with:
+
+```bash
+# Run the library's CLI binary from source
+cargo run --bin pd -- run --url "https://example.com/large.iso"
+```
+
 ## 🛠 Usage
 
 **1. Standalone Mode (CLI)**
@@ -87,7 +94,7 @@ pd stop
 | `--verify-sha256`          | Hash string to verify file integrity              | None          |
 | `--dir`, `-d`              | Directory to store downloads                      | Current Dir   |
 | `--input`, `-i`            | Input file with list of URLs (one per line)       | None          |
-| `--concurrent_files`, `-c` | Number of concurrent downloads in batch mode      | `2`           |
+| `--concurrent_files`, `-c` | Number of concurrent downloads in batch mode      | `3`           |
 
 ## 📚 Library Usage
 

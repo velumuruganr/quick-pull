@@ -1,3 +1,8 @@
+//! Daemon mode implementation.
+//!
+//! The daemon provides a small TCP-based control plane for managing
+//! background downloads. It accepts JSON `Command`s and returns
+//! `Response`s defined in `ipc.rs`.
 use crate::ipc::{Command, JobStatus, Response};
 use crate::observer::DaemonObserver;
 use crate::{download_chunk, downloader};
@@ -14,11 +19,20 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 
+/// Runtime status for an active job inside the daemon.
+///
+/// This structure is intentionally light-weight and contains atomics
+/// so it can be updated from multiple worker tasks without heavy locking.
 pub struct ActiveJobData {
+    /// Job id assigned by the daemon.
     pub id: usize,
+    /// Output filename for the job.
     pub filename: String,
+    /// Total size (in bytes) for the job, updated after metadata fetch.
     pub total_bytes: AtomicU64,
+    /// Running counter of downloaded bytes.
     pub downloaded_bytes: AtomicU64,
+    /// Short textual state (e.g. "Starting...", "Downloading...", "Done").
     pub state: Mutex<String>,
 }
 
@@ -26,6 +40,10 @@ struct DaemonState {
     jobs: HashMap<usize, Arc<ActiveJobData>>,
 }
 
+/// Start the daemon listening on `127.0.0.1:port`.
+///
+/// This function runs an event loop accepting simple JSON commands
+/// to add jobs, query status, or shutdown the daemon.
 pub async fn start_daemon(port: u16) -> Result<()> {
     let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
     println!("Daemon started on port {}", port);
@@ -135,6 +153,10 @@ pub async fn start_daemon(port: u16) -> Result<()> {
     }
 }
 
+/// Internal helper: performs downloading for a job in background.
+///
+/// This is responsible for preparing the download, spawning chunk tasks,
+/// and updating the `ActiveJobData` as progress occurs.
 async fn perform_background_download(
     url: String,
     dir: String,
@@ -226,6 +248,7 @@ async fn perform_background_download(
     Ok(())
 }
 
+/// Serialize and send a `Response` back to the connected socket.
 async fn send_response(socket: &mut tokio::net::TcpStream, resp: Response) -> Result<()> {
     let json = serde_json::to_string(&resp)?;
     socket.write_all(json.as_bytes()).await?;

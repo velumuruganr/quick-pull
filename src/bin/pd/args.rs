@@ -1,3 +1,8 @@
+//! Command-line argument definitions for the `pd` binary.
+//!
+//! This module defines the parsed CLI structures using `clap`. The
+//! `Args` and `Commands` types are exported by the crate so the
+//! library binary can consume them when assembling behavior.
 use clap::{Parser, Subcommand};
 
 /// A robust, concurrent file downloader.

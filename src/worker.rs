@@ -1,3 +1,9 @@
+//! Worker utilities that perform chunk downloads.
+//!
+//! This module contains the low-level code that fetches byte ranges and
+//! writes them into the pre-allocated output file. Workers perform retries,
+//! optionally throttle using a shared rate limiter, and update a shared
+//! `DownloadState` so progress can be resumed.
 use crate::observer::ProgressObserver;
 use crate::state::{Chunk, DownloadState, save_state};
 use anyhow::{Context, Result};
@@ -7,13 +13,17 @@ use reqwest::header::RANGE;
 use std::io::SeekFrom;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::{AsyncSeekExt, AsyncWriteExt, BufWriter}; // Import BufWriter
+use tokio::io::{AsyncSeekExt, AsyncWriteExt, BufWriter};
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 
+/// A shared (Arc-wrapped) rate limiter type used by workers.
 pub type ArcRateLimiter = Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>;
 
 /// Downloads a single chunk with buffered writing and robust error handling.
+///
+/// The function performs retries, optional rate limiting and updates the
+/// shared `DownloadState` on success so progress can be resumed later.
 pub async fn download_chunk(
     chunk: Chunk,
     output_file: String,

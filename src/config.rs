@@ -14,12 +14,31 @@ use serde::Deserialize;
 /// * `rate_limit` - Default rate limit in bytes per second.
 /// * `default_dir` - Default directory to save downloaded files.
 /// * `concurrent_files` - Default number of files to download at a time.
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
 pub struct Settings {
     pub threads: Option<u8>,
     pub rate_limit: Option<u32>,
     pub default_dir: Option<String>,
     pub concurrent_files: Option<usize>,
+    pub server_secret: Option<String>,
+    pub server_addr: Option<String>,
+    pub daemon_secret: Option<String>,
+    pub daemon_addr: Option<String>,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            threads: None,
+            rate_limit: None,
+            default_dir: None,
+            concurrent_files: None,
+            server_secret: None,
+            server_addr: Some("127.0.0.1".to_string()),
+            daemon_secret: None,
+            daemon_addr: Some("127.0.0.1:9090".to_string()),
+        }
+    }
 }
 
 impl Settings {

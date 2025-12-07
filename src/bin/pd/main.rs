@@ -142,10 +142,16 @@ async fn process_url(
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
+    let settings = Settings::load().unwrap_or_default();
+
+    let secret = settings.server_secret.clone();
+    let bind_ip = settings
+        .server_addr
+        .unwrap_or_else(|| "127.0.0.1".to_string());
 
     match args.command {
         Some(Commands::Start) => {
-            parallel_downloader::daemon::start_daemon(9090).await?;
+            parallel_downloader::daemon::start_daemon(9090, secret, bind_ip).await?;
         }
         Some(Commands::Add { url, dir }) => {
             send_command(Command::Add { url, dir }).await?;
@@ -169,7 +175,6 @@ async fn main() -> Result<()> {
             input,
             concurrent_files,
         }) => {
-            let settings = Settings::load().unwrap_or_default();
             let threads = threads.or(settings.threads).unwrap_or(4);
             let rate_limit_val = rate_limit.or(settings.rate_limit);
             let default_dir = dir

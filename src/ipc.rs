@@ -5,6 +5,12 @@
 //! messages exchanged between the CLI (`pd`) and the background daemon.
 use serde::{Deserialize, Serialize};
 
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Request {
+    pub secret: Option<String>,
+    pub command: Command,
+}
+
 /// Commands that can be sent to the running daemon.
 ///
 /// Sent from the CLI to control the background service (add jobs,

@@ -3,7 +3,7 @@
 //! The daemon provides a small TCP-based control plane for managing
 //! background downloads. It accepts JSON `Command`s and returns
 //! `Response`s defined in `ipc.rs`.
-use crate::ipc::{Command, JobStatus, Response};
+use crate::ipc::{Command, JobStatus, Request, Response};
 use crate::observer::DaemonObserver;
 use crate::{download_chunk, downloader};
 use anyhow::Result;
@@ -44,9 +44,9 @@ struct DaemonState {
 ///
 /// This function runs an event loop accepting simple JSON commands
 /// to add jobs, query status, or shutdown the daemon.
-pub async fn start_daemon(port: u16) -> Result<()> {
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
-    println!("Daemon started on port {}", port);
+pub async fn start_daemon(port: u16, secret: Option<String>, bind_ip: String) -> Result<()> {
+    let listener = TcpListener::bind(format!("{}:{}", bind_ip, port)).await?;
+    println!("Daemon started on {}:{}", bind_ip, port);
 
     let client = reqwest::Client::builder()
         .user_agent("ParallelDownloader/0.2")
@@ -59,7 +59,8 @@ pub async fn start_daemon(port: u16) -> Result<()> {
     let next_id = Arc::new(AtomicUsize::new(1));
 
     loop {
-        let (mut socket, _) = listener.accept().await?;
+        let (mut socket, addr) = listener.accept().await?;
+        let secret_check = secret.clone();
 
         let next_id_ref = next_id.clone();
         let state_ref = global_state.clone();
@@ -78,8 +79,8 @@ pub async fn start_daemon(port: u16) -> Result<()> {
             };
 
             let req_str = String::from_utf8_lossy(&buf[..n]);
-            let command: Command = match serde_json::from_str(&req_str) {
-                Ok(c) => c,
+            let request: Request = match serde_json::from_str(&req_str) {
+                Ok(r) => r,
                 Err(e) => {
                     let _ =
                         send_response(&mut socket, Response::Err(format!("Invalid JSON: {}", e)))
@@ -87,6 +88,20 @@ pub async fn start_daemon(port: u16) -> Result<()> {
                     return;
                 }
             };
+
+            if let Some(ref server_pass) = secret_check
+                && request.secret.as_ref() != Some(server_pass)
+            {
+                println!("⚠️ Unauthorized attempt from {}", addr);
+                let _ = send_response(
+                    &mut socket,
+                    Response::Err("Unauthorized: Invalid secret".into()),
+                )
+                .await;
+                return;
+            }
+
+            let command = request.command;
 
             match command {
                 Command::Shutdown => {

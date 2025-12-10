@@ -384,13 +384,15 @@ async fn perform_background_download(
         }
     }
 
-    let _ = tokio::fs::remove_file(&state_filename).await;
-    {
+    if !cancel_token.is_cancelled() {
+        let _ = tokio::fs::remove_file(&state_filename).await;
         let mut s = job_data.state.lock().await;
         *s = "Done".into();
+        job_data.downloaded_bytes.store(size, Ordering::SeqCst);
+    } else {
+        let mut s = job_data.state.lock().await;
+        *s = "Paused".into();
     }
-    // Ensure 100% on finish
-    job_data.downloaded_bytes.store(size, Ordering::SeqCst);
 
     Ok(())
 }
